@@ -1,5 +1,30 @@
 from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
+
 app = Flask(__name__)
+
+ENV = 'dev'
+
+if ENV == 'dev':
+    app.debug = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:123456@localhost/lexus'
+else:
+    app.debug = False
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:123456@localhost/lexus'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+class Question(db.Model):
+    __tablename__ = 'questions'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String())
+    answer = db.Column(db.String())
+
+    def __init__(self, title, answer):
+        self.title = title
+        self.answer = answer
 
 default_category = 'javascript'
 questions = [
@@ -31,3 +56,6 @@ def get_questions():
 @app.route('/questions', methods=['POST'])
 def create_question():
     return ''
+
+if __name__ == '__main__':
+    app.run()
