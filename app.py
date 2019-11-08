@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
+from marshmallow import Schema, fields
 
 app = Flask(__name__)
 
@@ -7,40 +8,38 @@ ENV = 'dev'
 
 if ENV == 'dev':
     app.debug = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:123456@localhost/lexus'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://root:password@localhost/questionarium'
 else:
     app.debug = False
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:123456@localhost/lexus'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://root:password@localhost/questionarium'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+#### Models ####
 class Question(db.Model):
     __tablename__ = 'questions'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String())
     answer = db.Column(db.String())
+    category = db.Column(db.String())
 
-    def __init__(self, title, answer):
+    def __init__(self, title, answer, category):
         self.title = title
         self.answer = answer
+        self.category = category
+
+#### Schemas ####
+class QuestionSchema(Schema):
+    id = fields.Int(dump_only=True)
+    title = fields.Str()
+    answer = fields.Str()
+    category = fields.Str()
+
+questions_schema = QuestionSchema(many=True)
 
 default_category = 'javascript'
-questions = [
-    {
-        'id': 1,
-        'title': 'Sample title',
-        'answer': 'Sample answer',
-        'category': 'javascript'
-    },
-    {
-        'id': 2,
-        'title': 'Sample title',
-        'answer': 'Sample answer',
-        'category': 'python'
-    }
-]
 
 @app.route('/health')
 def health():
@@ -49,12 +48,16 @@ def health():
 
 @app.route('/questions', methods=['GET'])
 def get_questions():
-    category = request.args.get('category', default_category)
-    filtered_questions = list(filter(lambda x: x['category'] == category, questions))
-    return jsonify(filtered_questions)
+    questions = Question.query.all()
+    result = questions_schema.dump(questions)
+    return {"questions": result}
 
 @app.route('/questions', methods=['POST'])
 def create_question():
+    req_data = request.get_json()
+    data = Question(req_data['title'], req_data['answer'], req_data['category'])
+    db.session.add(data)
+    db.session.commit()
     return ''
 
 if __name__ == '__main__':
