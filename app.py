@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 from marshmallow import Schema, fields
 
 app = Flask(__name__)
@@ -37,6 +38,7 @@ class QuestionSchema(Schema):
     answer = fields.Str()
     category = fields.Str()
 
+question_schema = QuestionSchema()
 questions_schema = QuestionSchema(many=True)
 
 default_category = 'javascript'
@@ -46,6 +48,15 @@ def health():
     state = {"status": "UP"}
     return jsonify(state)
 
+@app.route('/questions/<int:id>')
+def get_question(id):
+    try:
+        question = Question.query.get(id)
+    except IntegrityError:
+        return {"message": "Author could not be found."}, 400
+    question_result = question_schema.dump(question)
+    return {"question": question_result}
+
 @app.route('/questions', methods=['GET'])
 def get_questions():
     questions = Question.query.all()
@@ -54,11 +65,15 @@ def get_questions():
 
 @app.route('/questions', methods=['POST'])
 def create_question():
-    req_data = request.get_json()
-    data = Question(req_data['title'], req_data['answer'], req_data['category'])
-    db.session.add(data)
+    json_data = request.get_json()
+    if not json_data:
+        return {"message": "No input data provided"}, 400
+    data = question_schema.load(json_data)
+    question = Question(data['title'], data['answer'], data['category'])
+    db.session.add(question)
     db.session.commit()
     return ''
 
 if __name__ == '__main__':
+    db.create_all()
     app.run()

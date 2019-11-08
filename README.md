@@ -14,7 +14,7 @@ docker run -it --rm --link postgres:db --name adminer -p 8080:8080 -d adminer
 ```
 
 ```sh
-curl -X POST http://localhost:5000/questions -d '{ "id": "1", "title": "Question title", "answer": "Question answer", "category": "python" }' -H "Content-Type: application/json"
+curl -X POST http://localhost:5000/questions -d '{ "title": "Question title", "answer": "Question answer", "category": "python" }' -H "Content-Type: application/json"
 ```
 
 https://flask-sqlalchemy.palletsprojects.com/en/2.x/quickstart/#quickstart
